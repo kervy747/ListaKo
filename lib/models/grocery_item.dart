@@ -1,3 +1,6 @@
+// sort options
+enum ItemSort { oldest, newest, category }
+
 enum GroceryCategory {
   fruitsVeggies,
   meatPoultry,
@@ -47,6 +50,10 @@ class GroceryItem {
 
   // line total
   double get totalPrice => price * parsedQuantity;
+
+  // time added (from id)
+  DateTime get addedAt =>
+      DateTime.fromMicrosecondsSinceEpoch(int.tryParse(id) ?? 0);
 
   // to firestore
   Map<String, dynamic> toMap() => {

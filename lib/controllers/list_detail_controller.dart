@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:listako/controllers/currency_controller.dart';
 import 'package:listako/models/grocery_item.dart';
 import 'package:listako/models/grocery_list.dart';
 
@@ -9,11 +11,57 @@ class ListDetailController extends ChangeNotifier {
 
   ListDetailController({required this.list});
 
-  // unchecked first
-  List<GroceryItem> get sortedItems => [
-        ...list.items.where((i) => !i.isChecked),
-        ...list.items.where((i) => i.isChecked),
-      ];
+  // current sort
+  ItemSort sort = ItemSort.oldest;
+
+  // change sort
+  void setSort(ItemSort value) {
+    if (value == sort) return;
+    sort = value;
+    notifyListeners();
+  }
+
+  // sorted items (checked stay at the bottom)
+  List<GroceryItem> get sortedItems {
+    int compare(GroceryItem a, GroceryItem b) {
+      switch (sort) {
+        case ItemSort.oldest:
+          return a.addedAt.compareTo(b.addedAt);
+        case ItemSort.newest:
+          return b.addedAt.compareTo(a.addedAt);
+        case ItemSort.category:
+          final byCategory = a.category.index.compareTo(b.category.index);
+          return byCategory != 0 ? byCategory : a.addedAt.compareTo(b.addedAt);
+      }
+    }
+
+    final unchecked = list.items.where((i) => !i.isChecked).toList()..sort(compare);
+    final checked = list.items.where((i) => i.isChecked).toList()..sort(compare);
+    return [...unchecked, ...checked];
+  }
+
+  // list as text (items + prices only)
+  String get shareText {
+    final symbol = CurrencyController.instance.currency.symbol;
+    final buffer = StringBuffer('${list.name}\n');
+    for (final item in list.items) {
+      final qty = item.quantity.trim();
+      buffer.write('- ${item.name}');
+      if (qty.isNotEmpty && qty != '1') buffer.write(' ($qty)');
+      if (item.totalPrice > 0) {
+        buffer.write(' - $symbol${item.totalPrice.toStringAsFixed(2)}');
+      }
+      buffer.write('\n');
+    }
+    return buffer.toString().trimRight();
+  }
+
+  // copy list (false = nothing to copy)
+  Future<bool> copyListAsText() async {
+    if (list.items.isEmpty) return false;
+    await Clipboard.setData(ClipboardData(text: shareText));
+    return true;
+  }
 
   // budget text
   String get budgetText =>

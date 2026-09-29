@@ -60,6 +60,18 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
     }
   }
 
+  // copy list
+  Future<void> _copyList() async {
+    final copied = await _controller.copyListAsText();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(copied ? 'List copied to clipboard' : 'Nothing to copy yet'),
+        backgroundColor: copied ? AppColors.green : AppColors.red,
+      ),
+    );
+  }
+
   // open budget dialog
   Future<void> _editBudget() async {
     final result = await showDialog<String>(
@@ -166,6 +178,40 @@ class _ListDetailScreenState extends State<ListDetailScreen> {
               overflow: TextOverflow.ellipsis,
             ),
           ),
+          // sort button
+          PopupMenuButton<ItemSort>(
+            icon: const Icon(Icons.sort, color: AppColors.textDark),
+            tooltip: 'Sort items',
+            initialValue: _controller.sort,
+            onSelected: _controller.setSort,
+            itemBuilder: (_) => [
+              _sortOption(ItemSort.oldest, 'Order added'),
+              _sortOption(ItemSort.newest, 'Newest first'),
+              _sortOption(ItemSort.category, 'Category'),
+            ],
+          ),
+          // copy button
+          IconButton(
+            icon: const Icon(Icons.copy, color: AppColors.textDark),
+            tooltip: 'Copy list as text',
+            onPressed: _copyList,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // sort option
+  PopupMenuItem<ItemSort> _sortOption(ItemSort value, String label) {
+    final selected = _controller.sort == value;
+    return PopupMenuItem(
+      value: value,
+      child: Row(
+        children: [
+          Icon(Icons.check,
+              size: 18, color: selected ? AppColors.green : Colors.transparent),
+          const SizedBox(width: 8),
+          Text(label),
         ],
       ),
     );
